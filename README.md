@@ -1,12 +1,14 @@
 ---
 title: "Trabajo estadistica"
-author: "Ajelandro Burtegue"
+author: "Antonio Pedreño y Ajelandro Burtegue"
 date: "01/06/2021"
 output:
   html_document: default
   word_document: default
+  pdf_document: default
 ---
-
+---
+___
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 ```
@@ -21,24 +23,28 @@ Para la fácil compresión dejaremos por aquí las primeras líneas de nuestros 
 
 ```{r}
 StudentsPerformance<-read.csv(file='StudentsPerformance.csv', TRUE)
-knitr::kable(head(StudentsPerformance))
+Students_head <- head(StudentsPerformance)
+colnames(Students_head) <- c("Género", "Raza", "Estudios parentales", "Comida", "Preparación", "Mates", "Lectura", "Escritura")
+knitr::kable(Students_head)
 ```
 En caso de quere consultarla con mayor detenimiento, la tabla de datos se puede encontrar en la página web de _"kaggle"_, y para acceder a ella [clique aquí](https://www.kaggle.com/spscientist/students-performance-in-exams).
 
-# Análisis descriptivo
+# 1. Análisis descriptivo
 
 A continuación realizaremos un análisis descriptivo breve sobre los tres exámenes que se realizaron.
 
 
 - Resultados en la prueba de escritura
 ```{r}
-summary(StudentsPerformance$writing.score)
+Summary_writing <- c(summary(StudentsPerformance$writing.score))
+Summary_writing
 ```
 El primer exmane que veremos será el de escritura, siendo la mínima nota un 10 y la máxima un 100, su media y mediana muy parecidas, siendo estas 68 y 69 respectivamente.
 
 - Resultados en la prueba de lectura
 ```{r}
-summary(StudentsPerformance$reading.score)
+Summary_reading <- c(summary(StudentsPerformance$reading.score))
+Summary_reading
 ```
 
 En el examen de lectura salió mejor que el de escritura ya que tanto la media como la mediana son más grandes, ambas muy cercas del 70 y además la nota mínima subió 7 puntos.
@@ -46,19 +52,29 @@ En el examen de lectura salió mejor que el de escritura ya que tanto la media c
 
 - Resultados en la prueba de matemáticas
 ```{r}
-summary(StudentsPerformance$math.score)
+summary_math <- c(summary(StudentsPerformance$math.score))
+summary_math
 ```
 
 En de matemáticas, el rango  a diferencia de los dos primeros es de [0, 100], por lo que en este examen se logro obtener tanto la máxima como la mínima nota posible, luego vemos que la media y la mediana también son muy parecidas por hay más confianza al asegurar que no hay valores tan extremos que puedan alterar la media de resultados que como se puede apreciar es la menor de las tres medias que hemos visto, intuyendo que los estudantes se prepararon menos para este examen o que resultó más complicado que los otros desde el punto del tomador de la prueba.
 
+Para su comodidad, las agruparemos en una tabla.
 
-# Estimación de intervalos y contraste de hipotesis
+```{r}
+Resument <- data.frame(Summary_writing, Summary_reading, summary_math)
+Resumen <- t(Resument)
+rownames(Resumen) <- c("Escritura", "Lectura", "Matemáticas")
+colnames(Resumen) <- c("Mínimo", "1er Cuart.", "Mediana","Media","3er Cuart.", "Máximo")
+knitr::kable(Resumen)
+```
+
+# 2. Estimación de intervalos y contraste de hipotesis
 
 Ahora procederemos a escoger intervalos de confianza para cuatro posibilidades distintas, en todas buscaremos un intervalo de confianza del 95%, la razón de esto es que no conocemos sufiente del tema para proponer nosotros nuestras propias confianzas, por lo que usaremos la más común
 
 Lo que haremos aquí será tomar como cierto la afirmación de que nuestra población total equivale a las 1000 personas que realizaron el test y cojeremos una muestra de esos 1000 para poder trabajar con ella.
 
-### Estimación de intervalos en el examen de matemáticas
+## 2.1 Examen de matemáticas
 
 Antes que nada lo primero que haremos será ver con lo que estamos trabajando, por ello hemos decidido crear unos histogramas para interpretar los datos.
 ```{r}
@@ -66,7 +82,7 @@ mathex <- (StudentsPerformance$math.score)
 math_mean <- mean(mathex)
 Sample_math <- sample(StudentsPerformance$math.score, size=100)
 sample_math_mean <- mean(Sample_math)
-library(e1071)
+
 hist(mathex)
 hist(Sample_math)
 #skewness(Sample_math)
@@ -89,164 +105,181 @@ plot(density(puntos))
 
 ```
 
-Ahora vamos a establecer los intervalos, para ello nos ayudaremos de la fórmula de $error=z*\frac{\sigma}{\sqrt{n}}$ para que luego dicho error se lo sumaremos y restaremos a nuestra media de muestra para hallar el intervalo de confianza.
+Ahora vamos a establecer los intervalos, se puede realizar de varias formas, de manera manual sería con la fórmula $error=z*\frac{\sigma}{\sqrt{n}}$ para que luego dicho error se lo sumaremos y restaremos a nuestra media de muestra para hallar el intervalo de confianza.
 Z es el valor crítico, se puede calcular con la función qnorm en r y su valor es muy próximo a dos cuando la confianza es del 95%
 sigma es la desviación estándar de la población total
 n es el número total de población
 notar que es bilateral por lo que 0.25-0.25
 
-```{r}
-#Intervalos de confiaza 95% de que pueda coger un resultado de Mates que de [65, 67]
+No obstante, esto en R también se puede obtener con las funciones de "qnorm()" o "qt()" en caso de que se desconociera la desviación estándar de la población.
 
-math.mean <- mean(StudentsPerformance$math.score)
-math.sd <- sd(StudentsPerformance$math.score)
-error.n <- qnorm(0.975)*(math.sd/sqrt(1000))
 
-x1 <- math.mean - error.n
-y1 <- math.mean + error.n
-Conf_math.interval_n <- c(x1,y1)
-Conf_math.interval_n
+Sin embargo, nosostro para ahorrar tiempo directamente lo veremos a través del test.t que nos facilatará dicha información.
 
-```
+Pero antes de hacerlo, primero plantearemos nuestra hipotesis alternativa que en este caso nuestra hipotesis será la de que los datos de la muestra tienen relación con los datos de la población total, por lo tanto nuestra hipotesis nula o de no reacción sería que no tuvieran. 
 
-También podríamos calcular el intervalo de confianza en caso de que desconocieramos la desviación estándar de la población total mediante el error t que se calcularia de esta manera $a$
+$H_0:\mu_m\neq\mu_p$
 
-```{r}
-error.t <- qt(0.975, df = 999)*(math.sd/sqrt(1000))
-x2 <- math.mean - error.t
-y2 <- math.mean + error.t
-Conf_math.interval_t <- c(x2,y2)
-Conf_math.interval_t
-
-```
-
-Aunque no es necesario hacerlo manualmente ya que R viene provisto de la función "t.test" que te aporta los valores como veremos ahora en el contraste de hipotesis
-El t.test que realizaremos será de una sola muestra.
+$H_1:\mu_m=\mu_p$
 ```{r}
 t.test(Sample_math, mu = math_mean, conf.level = 0.95, alternative = "two.sided")
-
 ```
+Como se puede observa en el test, el p valor en nuestro caso supera no supera al 0.5 por lo que tenemos la suficiente confianza para rechazar la hipotesis nula quedándonos por ahora con la hipotesis alternativa.
 
 
-```{r}
+# 2.2 Relación de los resultados según puntuación de mates en lectura y escritura
 
-```
+Ahora vamos a analizar la relación que hay entre los tres exámenes, para ello nos vamos a preguntar los siguiente: Los alumnos que mejores notas obtuvieron en los exámenes matemáticas, ¿también obtendran buenos resultados en los tests restantes?
 
-```{r}
-
-```
-
-### Resultados según puntuación de mates en reading y writing
-
+Primero veremos la relación entre el examen de lectura con el de matemáticas. Para represantar los resultados hemos decidido realizar una gráfica de puntos con regresión lineal junto con una gráfica de cuartiles.
 ```{r}
 plot(StudentsPerformance$math.score,StudentsPerformance$reading.score)
 mod1<-lm(StudentsPerformance$math.score ~ StudentsPerformance$reading.score)
 abline(mod1, col=2, lwd = 3)
 qqplot(StudentsPerformance$math.score,StudentsPerformance$reading.score)
+```
+Como se puede apreciar en ambas gráficas, hay una clara relación en los resultados de los estudiantes, al menos en el de matemáticas con el de lectura, ahora vamos a ver el de escritura, auqnue preveemos que nos va a dar algo parecido.
 
-plot(StudentsPerformance$math.score)
-
+```{r}
 plot(StudentsPerformance$math.score,StudentsPerformance$writing.score)
 mod2<-lm(StudentsPerformance$math.score ~ StudentsPerformance$writing.score)
 abline(mod2, col=2, lwd = 3)
 qqplot(StudentsPerformance$math.score,StudentsPerformance$writing.score)
 ```
+Efectivamente, las gráficas de lectura sobre matemáticas y escritura sobre matemáticas son muy similares, entendiendo que los estudiantes no tuvieron que sacrificar ningún examen para obtener mejores notas en otro, sino que el nivel de cada alumno se vió reflejado en los tres examenes más o menos por igual.
 
+# 2.3 Relación de las medias de de mates con lectura y escritura
+
+Ahora vamos a comparar sus medias para ver si son iguales, para ello nos ayudaremos del test de dos muestras con la corrección de Welch.
+
+Primero iremos con el de lectura:
+$H_0:\mu_m\neq\mu_l$
+$H_1:\mu_m=\mu_l$
 
 ```{r}
-#Intervalos de confianza en segun la puntuación
+t.test(StudentsPerformance$reading.score, StudentsPerformance$math.score,  alt="two.sided", conf = 0.95)
 ```
+Como se puede apreciar, el p valor es muy pequeño, lo que indica que no tenemos pruebas suficientes para rechazar la hipotesis nula y quedarnos con la alternativa.
+
+Ahora vamos a probar con el examen de escritura:
+$H_0:\mu_m\neq\mu_l$
+$H_1:\mu_m=\mu_l$
+```{r}
+t.test(StudentsPerformance$writing.score, StudentsPerformance$math.score,  alt="two.sided", conf = 0.95)
+
+```
+Al igual que en la prueba de lectura, no hay sufuciente confianza para rechazar la hipotesis nula de no reacción, por lo que por ahora afirmaremos que no son iguales las medias, no obstante notar como este p valor es más grande que el anterior, esto se debe a que estas dos medias se parecen un poco más, por lo que habiamos comentado al principio de que el examen de lectura salió mejor que el resto.
 
 
+## 2.4 ¿Sacaron las mujeres mejores notas que los hombres?
 
-### ¿Sacaron las mujeres mejores notas que los hombres?
-
+Ahora, por último hemos decidido comparar ambos géneros, para ello, no es necesario pero debido a nuestra falta de conocimiento, en R primero crearemos variables dummies para trabajar más comodamente, esto en jamovi no será necesario.
 ```{r}
 
 StudentsGender <- StudentsPerformance[,c(1,6,7,8)]
-str(StudentsGender)
 
 StudentsGenderD <- fastDummies::dummy_cols(StudentsGender, remove_first_dummy = TRUE)
-str(StudentsGenderD)
-head(StudentsGenderD)
-
-
-plot(StudentsGenderD$gender_male, StudentsGenderD$math.score, xlab = "Mujer = 0, Hombre = 1", ylab = "Resultados matemáticas")
-regresion_gender_math <- lm(StudentsGenderD$math.score ~ StudentsGenderD$gender_male)
-abline(regresion_gender_math, lw = 2, col = 2)
-
-qqplot(StudentsGenderD$gender_male, StudentsGenderD$math.score, xlab = "Mujer = 0, Hombre = 1", ylab = "Resultados matemáticas")
-
+knitr::kable(head(StudentsGenderD))
+colnames(StudentsGenderD) <- c("Género", "Matemáticas","Lectura","Escritura")
 female_score <- StudentsGenderD[StudentsGenderD$gender_male==0,]
-summary(female_score)
-head(female_score)
 number_females <- nrow(female_score)
-number_females
+
 
 
 male_score <- StudentsGenderD[StudentsGenderD$gender_male==1,]
-summary(male_score)
-head(male_score)
 number_males <- nrow(male_score)
-number_males
+```
 
+Lo siguiente que haremos será graficar dos histogramas y ver con que estamos trabajando.
 
+```{r message=TRUE, warning=TRUE}
 female_math.score <- female_score[,2]
-head(female_math.score)
-hist(female_math.score, freq=TRUE)
+
+#hist(female_math.score, freq=TRUE, xlab = "Resultados", ylab = "Frecuencia", main = "Histograma de los chicos")
 Female_math.mean <- mean(female_math.score)
 
-male_math.score <- male_score[,2]
-hist(male_math.score, freq=TRUE)
-lines(density(male_math.score))
-Male_math.mean <- mean(male_math.score)
+#male_math.score <- male_score[,2]
+#hist(male_math.score, freq=TRUE, xlab = "Resultados", ylab = "Frecuencia", main = "Histograma de las chicas")
+#lines(density(male_math.score))
+#Male_math.mean <- mean(male_math.score)
 
-Math.mean <- c(Male_math.mean, Female_math.mean)
-male_fem <- c("Hombres", "Mujeres")
-color.male_fem <- c("Blue", "Pink")
-barplot(Math.mean, names.arg = male_fem, col = color.male_fem, xlab = "Media del examen de matemáticas")
+```
+De los dos histogramas podemos ver que la mayoría de los resultados se encuentran entre [50-70], entendiendo así además que afortunadamente la mayoría de ellos lograron aprobar. Pero para poder diferencia mejor ambos grupos vamos a pasar por diferentes gráficos.
+
+El siguiente será una gráfica de puntos con regresión lineal que nos compará ambas medias mostrandonos cual de los dos grupos obtuvo un mejor rendimiento ante la prueba, que como se verá por la regresión lineal ascendente, los chicos lograron obtener mejores resultados en general.
+Esto también se puede presenciar en la gráfico de barras de abajo que nos compara las medias dando la clara ventaja a los varones. 
+```{r}
+# plot(StudentsGenderD$gender_male, StudentsGenderD$math.score, xlab = "Mujer = 0, Hombre = 1", ylab = "Resultados matemáticas")
+# regresion_gender_math <- lm(StudentsGenderD$math.score ~ StudentsGenderD$gender_male)
+# abline(regresion_gender_math, lw = 2, col = 2)
 ```
 
 ```{r}
-#Intervalos Mujer
-fem_math.mean <- mean(female_math.score)
-fem_math.sd <- sd(female_math.score)
-fem_error.n <- qnorm(0.975)*(fem_math.sd/sqrt(482))
-fem_error.t <- qt(0.975, df = 481)*(fem_math.sd/sqrt(482))
-
-
-fx1 <- fem_math.mean - fem_error.n
-fy1 <- fem_math.mean + fem_error.n
-fem_Conf_math.interval_n <- c(fx1,fy1)
-fem_Conf_math.interval_n
-
-fx2 <- fem_math.mean - fem_error.t
-fy2 <- fem_math.mean + fem_error.t
-fem_Conf_math.interval_t <- c(fx2,fy2)
-fem_Conf_math.interval_t
-sample(female_math.score, 19, replace = TRUE)
-
-#Intervalos Hombre
-male_math.mean <- mean(male_math.score)
-male_math.sd <- sd(male_math.score)
-male_error.n <- qnorm(0.975)*(male_math.sd/sqrt(518))
-male_error.t <- qt(0.975, df = 517)*(male_math.sd/sqrt(518))
-
-
-mx1 <- male_math.mean - male_error.n
-my1 <- male_math.mean + male_error.n
-male_Conf_math.interval_n <- c(x1,y1)
-male_Conf_math.interval_n
-
-mx2 <- male_math.mean - male_error.t
-my2 <- male_math.mean + male_error.t
-male_Conf_math.interval_t <- c(x2,y2)
-male_Conf_math.interval_t
-sample(male_math.score, 19, replace = TRUE)
+# Female_math.mean <- mean(female_math.score)
+# Male_math.mean <- mean(male_math.score)
+# 
+# Math.mean <- c(Male_math.mean, Female_math.mean)
+# male_fem <- c("Hombres", "Mujeres")
+# color.male_fem <- c("Blue", "Pink")
+# barplot(Math.mean, names.arg = male_fem, col = color.male_fem, xlab = "Media del examen de matemáticas")
 ```
 
-## ¿Tuvo alguna importancia lan preparación de los padres?
+No obstante, el tamaño de ambos grupos _no_ es igual, por lo que habrá que tener esto en cuenta para las siguientes deducciones.
+```{r, echo=TRUE}
+number_females
+number_males
+```
 
+Esta vez para la realización de los intervalos únicamente nos centraremos en el test-t, puesto que la otra teoría manual, a nuestro criterio menos eficiente ya está explicada.
+
+```{r}
+# #Intervalos Mujer
+# fem_math.mean <- mean(female_math.score)
+# fem_math.sd <- sd(female_math.score)
+# fem_error.n <- qnorm(0.975)*(fem_math.sd/sqrt(482))
+# fem_error.t <- qt(0.975, df = 481)*(fem_math.sd/sqrt(482))
+# 
+# 
+# fx1 <- fem_math.mean - fem_error.n
+# fy1 <- fem_math.mean + fem_error.n
+# fem_Conf_math.interval_n <- c(fx1,fy1)
+# fem_Conf_math.interval_n
+# 
+# fx2 <- fem_math.mean - fem_error.t
+# fy2 <- fem_math.mean + fem_error.t
+# fem_Conf_math.interval_t <- c(fx2,fy2)
+# fem_Conf_math.interval_t
+# mean(sample(female_math.score, 19, replace = TRUE))
+# 
+# #Intervalos Hombre
+# male_math.mean <- mean(male_math.score)
+# male_math.sd <- sd(male_math.score)
+# male_error.n <- qnorm(0.975)*(male_math.sd/sqrt(518))
+# male_error.t <- qt(0.975, df = 517)*(male_math.sd/sqrt(518))
+# 
+# 
+# mx1 <- male_math.mean - male_error.n
+# my1 <- male_math.mean + male_error.n
+# male_Conf_math.interval_n <- c(x1,y1)
+# male_Conf_math.interval_n
+# 
+# mx2 <- male_math.mean - male_error.t
+# my2 <- male_math.mean + male_error.t
+# male_Conf_math.interval_t <- c(x2,y2)
+# male_Conf_math.interval_t
+# mean(sample(male_math.score, 19, replace = TRUE))
+```
+
+```{r}
+
+#t.test(female_math.score ~ male_math.score, var.eq=T, conf.int=0.95)
+```
+
+
+Otras gráficas:
+
+Gráfica que compara los resultados del examen de matemáticas con el nivel de educación que poseían los padres de los tomadores del examen.
+Como se puede apreciar no hay suficiente confianza para afirmar que el nivel educativo de los padres fuera relevante, pues no parece ser que ningún grupo sea excesivamente mayor que otros
 ```{r}
 
 StudentsParent_lvl_D <- StudentsPerformance[,c(3,6,7,8)]
@@ -259,41 +292,6 @@ boxplot(StudentsPerformance$math.score ~ StudentsPerformance$parental.level.of.e
 
 #Associated <- StudentsParent_lvl[StudentsParent_lvl$lvl_bachelors==1,Students,c(2,3,4,5)]
 ```
-Bachelors <- StudentsParent_lvl[StudentsParent_lvl[,5]==1,Students,c(2,3,4,5)]
-HighSchool <- StudentsParent_lvl[StudentsParent_lvl[,6]==1,Students,c(2,3,4,6)]
-Masters <- StudentsParent_lvl[StudentsParent_lvl[,7]==1,Students,c(2,3,4,7)]
-SomeCollege <- StudentsParent_lvl[StudentsParent_lvl[,8]==1,Students,c(2,3,4,8)]
-SomeHighSchool <- StudentsParent_lvl[StudentsParent_lvl[,9]==1,Students,c(2,3,4,9)]
+Notar que esta base de datos no refleja ninguna población real, sino que el autor de dicha base aclararó que son datos ficticios creados únicamente con el proposito de proporcionar información cómoda a aquellas personas que se esten iniciando en la estadística.
 
-## ¿Valió la pena el curso de preparación ante el examen?
-
-## ¿Tuvo algo que ver lo que comieron antes de realizar cada examen?
-
-_Tener en cuenta que sd es la desviación típica y afecta a la media_
-
-SE PUEDE HACER UNA REGRESIÓN LINEAL CUANDO LA VARIABLE X ES CATEGÓRICA, ES EL EJEMPLO DE DOS GRUPOS DE PUNTOS EN VERTICAL PARALELOS Y SE HACE LA REGRESIÓN
-
-PARA LO DE ARRIBA HAY QUE PASAR LA CATEGÓRICA A DUMMY QUE ES EN (SI TENGO TRES CATEGORÍAS DOS DUMMIES, SI TENGO DOS TENGO QUE HACER UNA)
-
-EL TEST-T ES UNA REGRESIÓN LINEAL PORQUE INDICA LA DIFERENCIA ENTRE LAS MEDIAS
-LA REGRESIÓN LINEALM ES MÁS FLEXIBLE QUE EL TEST-T YA QUE PUEDE HAVER DIFERENTES REGRESIONES LINEALES QUE SE AJUSTEN A DIFERENTES VARIABLES
-HACER UNA REGRESIÓN LINEAL
-
-
-PROBABILIDAD =/= CONFIANZA
-
-El R^2 es que porcentaje de la variabilidad en la variable respuesta que yo he conseguido averiguar en mi modelo
-Y la R es la correlación entre las dos variables 
-
-### Posibles hipotesis a plantear:
-
-- ¿Son los chicos son mejores?  
-- ¿Tiene algo que ver la comida?  
-- ¿El curso de preparación para el test valió la pena?
-- ¿Tiene algo que ver el nivel de sus padres?
-- ¿Algo que ver con la raza? (aqui no hay nombre de raza, solo: raza A vs raza B vs C vs D...)  
-- ¿Los mejores en el reading son mejores en el writting?
-- ¿Los mejores en mates lo hacen mejor en el reading writting?
-
-
-# QUIERO HACER LA DISTRIBUCIÓN NORMAL DE LOS HISTOGRAMAS Y PONERLOS JUNTX
+Trabajo realizado con Rstudio y jamovi simultáneamente.
